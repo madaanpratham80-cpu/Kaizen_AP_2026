@@ -1,123 +1,105 @@
 # KAIZEN — Database Normalization (1NF → 2NF → 3NF → BCNF)
 
-**App:** KAIZEN — Gamified personal routine tracker (quests, XP, health, streaks, achievements)
-**DB:** PostgreSQL · **Deliverable:** CP1 `dbms/01_normalization.md`
+**App:** KAIZEN — Gamified Personal Progression & Routine Tracker  
+**Database:** PostgreSQL 15+ · **Deliverable:** CP1 `dbms/01_normalization.md`
 
 ---
 
-## Unnormalized Form (UNF)
+## 1. Unnormalized Form (UNF)
 
-Single flat record per user with repeating groups:
+A single unnormalized record capturing user profile, stats, commitments, daily executions, and rewards:
+
+```text
+KAIZEN_UNF (
+    user_id, email, display_name, password_hash, timezone, created_at,
+    total_xp, health, current_streak, best_streak,
+    { quests [quest_id, title, category, pillar, recurrence, difficulty, target, reward_xp] },
+    { day_plans [day_plan_id, plan_date, status, planned_count,
+        { occurrences [occurrence_id, quest_id, occ_status, completed_at] } ] },
+    { progress_events [event_id, occurrence_id, event_kind, xp_delta, health_delta, event_time] },
+    { achievements [achievement_code, title, description, bonus_xp, unlocked_at] }
+)
 ```
-KAIZEN_UNF(user_id, email, display_name, timezone,
-  {goals[]},
-  total_xp, health, streak,
-  {sessions[]},
-  {quests[ {schedule_versions[ weekdays[] ]} ]},
-  {day_plans[ {occurrences[]} ]},
-  {progress_events[]},
-  {achievements[ eligibility_rule ]})
-```
-**Anomalies:** Cannot store a user without quests (insert); deleting a user removes global achievement definitions (delete); renaming a user requires updates across every row (update).
+
+**Anomalies:**
+- **Insert:** Cannot define global achievements or quests without registering a user.
+- **Delete:** Deleting a user deletes global achievement definitions and execution logs.
+- **Update:** Changing an achievement's bonus XP or a quest's title requires updates across redundant duplicate rows.
 
 ---
 
-## 1NF — Eliminate Repeating Groups
+## 2. First Normal Form (1NF)
 
-Split every nested/array attribute into separate flat tables. Each table gets a primary key.
+**Rule:** Eliminate repeating groups and nested arrays; ensure atomic attribute values and assign unique primary keys.
 
 | Table | Primary Key | Key Functional Dependencies |
 |---|---|---|
-| `User` | `id` | `id → email, display_name, timezone` |
-| `UserGoal` | `(userId, goal)` | All prime — no non-key attributes |
-| `PlayerState` | `userId` | `userId → xp, health, streak, state_version` |
-| `Session` | `id` | `id → tokenHash, userId, expiresAt` |
-| `Quest` | `id` | `id → userId, title, category, pillar` |
-| `ScheduleVersion` | `id` | `id → questId, effectiveFrom, recurrence, difficulty, target` |
-| `ScheduleWeekday` | `(scheduleId, weekday)` | All prime |
-| `DayPreferenceVersion` | `id` | `id → userId, effectiveFrom, effectiveTo` |
-| `DayPreferenceRestWeekday` | `(dayPrefId, restWeekday)` | All prime |
-| `DayPlan` | `id` | `id → userId, localDate, status, timezone_snapshot` |
-| `QuestOccurrence` | `id` | `id → userId, questId, dayPlanId, status, rewardXp` |
-| `ProgressEvent` | `id` | `id → userId, sequence, award_key, xpDelta, healthDelta` |
-| `CompletionReceipt` | `(userId, operationId)` | `(userId, operationId) → requestHash, responseBody` |
-| `Achievement` | `(code, ruleVersion)` | `(code, ruleVersion) → eligibilityRule` |
-| `UserAchievement` *(1NF)* | `(userId, achievementCode)` | Also stores `eligibilityRule` — **violates 2NF** |
-| `CalendarTimezoneTransition` | `id` | `id → userId, fromTz, toTz, lastOldDate, firstNewDate` |
+| `User` | `id` | `id → email, display_name, password_hash, timezone, created_at` |
+| `PlayerState` | `user_id` | `user_id → total_xp, health, current_streak, best_streak` |
+| `Quest` | `id` | `id → user_id, title, category, pillar, recurrence, difficulty, target, reward_xp` |
+| `DayPlan` | `id` | `id → user_id, plan_date, status, planned_count` |
+| `QuestOccurrence` | `id` | `id → quest_id, day_plan_id, status, completed_at` |
+| `ProgressEvent` | `id` | `id → user_id, occurrence_id, event_kind, xp_delta, health_delta, created_at` |
+| `UserAchievement` *(1NF)* | `(user_id, achievement_code)` | `(user_id, achievement_code) → unlocked_at, title, description, bonus_xp` |
+
+> **2NF Violation Identified in 1NF:** In `UserAchievement(1NF)`, `achievement_code → title, description, bonus_xp`. Since `achievement_code` is a proper subset of candidate key `(user_id, achievement_code)`, these non-prime attributes are partially dependent.
 
 ---
 
-## 2NF — Eliminate Partial Dependencies
+## 3. Second Normal Form (2NF)
 
-**Rule:** Every non-prime attribute must depend on the *whole* candidate key.
+**Rule:** Eliminate partial dependencies. Every non-prime attribute must depend on the whole candidate key.
 
-**Only violation found:** `UserAchievement` in 1NF stores `eligibilityRule`, which depends only on `(achievementCode, ruleVersion)` — a **partial dependency** on its `(userId, achievementCode)` key.
+**Decomposition:** Split `UserAchievement(1NF)` into:
+1. `Achievement` (`code` PK, `title`, `description`, `bonus_xp`)
+2. `UserAchievement` (`(user_id, achievement_code)` PK, `unlocked_at`)
 
-**Fix:** Split into two tables:
-
-| Table | Primary Key | Attributes |
-|---|---|---|
-| `Achievement` | `(code, ruleVersion)` | `eligibilityRule` |
-| `UserAchievement` | `(userId, achievementCode)` | `ruleVersion`, `unlockedAt`, `qualifyingOccurrenceId`, `qualifyingDayId`, `bonusXp` |
-
-All other tables have single-attribute PKs or all-prime composite keys → no partial dependencies possible.
+All other tables have single-attribute primary keys (`id` or `user_id`), naturally satisfying 2NF.
 
 ---
 
-## 3NF — Eliminate Transitive Dependencies
+## 4. Third Normal Form (3NF)
 
-**Rule:** No non-prime attribute may depend on another non-prime attribute (no $X \to Y \to Z$ where $X$ is a PK and $Y$ is not).
+**Rule:** Eliminate transitive dependencies ($X \to Y \to Z$ where $X$ is key and $Y$ is non-key).
 
-Potential transitive chains identified and resolved during decomposition:
-
-| Transitive Chain (Before) | Resolution |
+| Potential Transitive Dependency | Resolution Applied |
 |---|---|
-| `occurrence_id → dayPlanId → localDate, timezone_snapshot` | `localDate` stored only in `DayPlan`; `QuestOccurrence` holds only `dayPlanId` FK |
-| `event_id → (sealCode, ruleVersion) → eligibilityRule` | `ProgressEvent` stores only `(sealCode, ruleVersion)` FK to `Achievement` |
-| `schedule_id → questId → title, category, pillar` | Quest metadata stays in `Quest`; `ScheduleVersion` holds only `questId` FK |
-| `userId in PlayerState → userId in User → email, display_name` | `PlayerState` has own PK `userId`; no user metadata duplicated |
+| `occurrence_id → day_plan_id → plan_date` | `plan_date` stays in `DayPlan`; `QuestOccurrence` stores only FK `day_plan_id` |
+| `occurrence_id → quest_id → title, reward_xp` | Quest metadata remains in `Quest`; `QuestOccurrence` stores only FK `quest_id` |
+| `event_id → user_id → email, timezone` | User profile stored solely in `User`; `ProgressEvent` stores only FK `user_id` |
+| `user_id in PlayerState → user_id in User` | 1:1 relation isolated to keep high-frequency state updates off auth profile |
 
-No transitive dependencies remain → all 16 tables satisfy **3NF**.
-
----
-
-## BCNF — Verify Every Determinant is a Superkey
-
-**Rule:** For every non-trivial FD $X \to Y$, $X$ must be a superkey.
-
-| Table | Determinants | Superkey? | BCNF? |
-|---|---|---|:---:|
-| `User` | `id`, `normalizedEmail` | Both candidate keys | ✅ |
-| `PlayerState` | `userId` | Candidate key | ✅ |
-| `Session` | `id`, `tokenHash` | Both candidate keys | ✅ |
-| `Quest` | `id`, `(userId, id)` | Both candidate keys | ✅ |
-| `ScheduleVersion` | `id`, `(userId, questId, effectiveFrom)` | Both candidate keys | ✅ |
-| `DayPlan` | `id`, `(userId, localDate)` | Both candidate keys | ✅ |
-| `QuestOccurrence` | `id`, `(questId, dayPlanId)` | Both candidate keys | ✅ |
-| `ProgressEvent` | `id`, `(userId, sequence)`, `(userId, awardKey)` | All candidate keys | ✅ |
-| `Achievement` | `(code, ruleVersion)` | Candidate key | ✅ |
-| `UserAchievement` | `(userId, achievementCode)` | Candidate key | ✅ |
-| `CompletionReceipt` | `(userId, operationId)` | Candidate key | ✅ |
-| All-prime tables | Key itself | Trivially superkeys | ✅ |
-
-**Result: Zero BCNF violations.** The schema achieves BCNF with lossless-join decomposition and full dependency preservation.
+All non-prime attributes now depend directly and non-transitively on candidate keys. The schema satisfies **3NF**.
 
 ---
 
-## Final Schema Overview (16 Tables)
+## 5. Boyce-Codd Normal Form (BCNF)
+
+**Rule:** For every non-trivial functional dependency $X \to Y$, determinant $X$ must be a superkey.
+
+| Table | Candidate Keys | Determinants ($X$) | Superkey? | BCNF? |
+|---|---|---|:---:|:---:|
+| `User` | `{id}`, `{email}` | `id`, `email` | Yes | ✅ |
+| `PlayerState` | `{user_id}` | `user_id` | Yes | ✅ |
+| `Quest` | `{id}` | `id` | Yes | ✅ |
+| `DayPlan` | `{id}`, `{user_id, plan_date}` | `id`, `(user_id, plan_date)` | Yes | ✅ |
+| `QuestOccurrence` | `{id}`, `{quest_id, day_plan_id}` | `id`, `(quest_id, day_plan_id)` | Yes | ✅ |
+| `ProgressEvent` | `{id}` | `id` | Yes | ✅ |
+| `Achievement` | `{code}` | `code` | Yes | ✅ |
+| `UserAchievement` | `{user_id, achievement_code}` | `(user_id, achievement_code)` | Yes | ✅ |
+
+**Assessment:** Every determinant is a candidate key. The decomposition is lossless and preserves all functional dependencies.
+
+---
+
+## 6. Final Schema Overview (8 Core Tables)
 
 ```
-User ──< UserGoal
+User ──(1:1)── PlayerState
  │
- ├──(1:1)── PlayerState
- ├──────< Session
- ├──────< CalendarTimezoneTransition
- ├──────< CompletionReceipt
- ├──────< DayPreferenceVersion ──< DayPreferenceRestWeekday
- ├──────< Quest ──< ScheduleVersion ──< ScheduleWeekday
- │              └──< QuestOccurrence >──── DayPlan
- │                        │                  │
- └──────< ProgressEvent <────────────────────┘
- │
- └──────< UserAchievement >── Achievement
+ ├──(1)────< Quest ──────────< QuestOccurrence >───(1) DayPlan
+ ├──(1)────< ProgressEvent <─────────┘                    │
+ └──(1)────< UserAchievement >───(1) Achievement         │
+                 ▲                                        │
+                 └────────────────────────────────────────┘
 ```

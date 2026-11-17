@@ -1,287 +1,89 @@
 -- ============================================================
--- KAIZEN — Gamified Personal Routine Tracker
--- PostgreSQL Schema (dbms/03_schema.sql)
--- CP2 deliverable for AP Repo
+-- KAIZEN: Database Schema (PostgreSQL)
+-- CP2 Deliverable: dbms/03_schema.sql
 -- ============================================================
 
--- Enums
-CREATE TYPE day_status        AS ENUM ('OPEN', 'ACTIVE', 'MISSED', 'REST', 'EMPTY');
-CREATE TYPE occurrence_status AS ENUM ('PENDING', 'COMPLETED');
-CREATE TYPE quest_difficulty  AS ENUM ('EASY', 'MEDIUM', 'HARD');
-
--- ============================================================
--- 1. User
--- ============================================================
+-- 1. Users
 CREATE TABLE "User" (
-    id                UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-    "normalizedEmail" TEXT          NOT NULL,
-    "displayName"     TEXT          NOT NULL,
-    "passwordHash"    TEXT          NOT NULL,
-    timezone          TEXT          NOT NULL,
-    goals             TEXT[]        NOT NULL DEFAULT '{}',
-    "createdAt"       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT "User_normalizedEmail_key" UNIQUE ("normalizedEmail")
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email         VARCHAR(255) UNIQUE NOT NULL,
+    display_name  VARCHAR(100) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    timezone      VARCHAR(50)  NOT NULL DEFAULT 'UTC',
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
--- ============================================================
--- 2. Session
--- ============================================================
-CREATE TABLE "Session" (
-    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    "tokenHash" CHAR(64)    NOT NULL,
-    "userId"    UUID        NOT NULL,
-    "expiresAt" TIMESTAMPTZ NOT NULL,
-    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT "Session_tokenHash_key" UNIQUE ("tokenHash"),
-    CONSTRAINT "Session_userId_fkey"
-        FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE RESTRICT
-);
-
-CREATE INDEX "Session_userId_idx"    ON "Session"("userId");
-CREATE INDEX "Session_expiresAt_idx" ON "Session"("expiresAt");
-
--- ============================================================
--- 3. PlayerState  (1-to-1 with User)
--- ============================================================
+-- 2. Player State (1-to-1 Gamification State)
 CREATE TABLE "PlayerState" (
-    "userId"              UUID  PRIMARY KEY,
-    "totalXp"             INT   NOT NULL DEFAULT 0,
-    health                INT   NOT NULL DEFAULT 70,
-    "currentStreak"       INT   NOT NULL DEFAULT 0,
-    "bestStreak"          INT   NOT NULL DEFAULT 0,
-    "lastFinalizedDate"   DATE,
-    "stateVersion"        INT   NOT NULL DEFAULT 0,
-    "nextEventSequence"   INT   NOT NULL DEFAULT 1,
-
-    CONSTRAINT "PlayerState_userId_fkey"
-        FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE RESTRICT
+    user_id        UUID PRIMARY KEY REFERENCES "User"(id) ON DELETE CASCADE,
+    total_xp       INT NOT NULL DEFAULT 0 CHECK (total_xp >= 0),
+    health         INT NOT NULL DEFAULT 70 CHECK (health BETWEEN 0 AND 100),
+    current_streak INT NOT NULL DEFAULT 0 CHECK (current_streak >= 0),
+    best_streak    INT NOT NULL DEFAULT 0 CHECK (best_streak >= 0)
 );
 
--- ============================================================
--- 4. CalendarTimezoneTransition
--- ============================================================
-CREATE TABLE "CalendarTimezoneTransition" (
-    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    "userId"        UUID        NOT NULL,
-    "fromTimezone"  TEXT        NOT NULL,
-    "toTimezone"    TEXT        NOT NULL,
-    "lastOldDate"   DATE        NOT NULL,
-    "firstNewDate"  DATE        NOT NULL,
-    "gapStartsAt"   TIMESTAMPTZ NOT NULL,
-    "effectiveAt"   TIMESTAMPTZ NOT NULL,
-    "appliedAt"     TIMESTAMPTZ,
-
-    CONSTRAINT "CalendarTimezoneTransition_userId_fkey"
-        FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE RESTRICT
-);
-
-CREATE INDEX "CalendarTimezoneTransition_userId_appliedAt_idx"
-    ON "CalendarTimezoneTransition"("userId", "appliedAt");
-
--- ============================================================
--- 5. Quest
--- ============================================================
+-- 3. Quests (Commitment Templates)
 CREATE TABLE "Quest" (
-    id                      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    "userId"                UUID        NOT NULL,
-    title                   TEXT        NOT NULL,
-    category                TEXT        NOT NULL,
-    pillar                  TEXT        NOT NULL,
-    "archivedAt"            TIMESTAMPTZ,
-    "archiveEffectiveDate"  DATE,
-    version                 INT         NOT NULL DEFAULT 1,
-
-    CONSTRAINT "Quest_userId_id_key"  UNIQUE ("userId", id),
-    CONSTRAINT "Quest_userId_fkey"
-        FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE RESTRICT
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+    title      VARCHAR(200) NOT NULL,
+    category   VARCHAR(50)  NOT NULL,
+    pillar     VARCHAR(50)  NOT NULL,
+    recurrence VARCHAR(50)  NOT NULL DEFAULT 'DAILY',
+    difficulty VARCHAR(20)  NOT NULL DEFAULT 'MEDIUM',
+    target     INT          NOT NULL DEFAULT 1,
+    reward_xp  INT          NOT NULL DEFAULT 10
 );
 
-CREATE INDEX "Quest_userId_archivedAt_idx" ON "Quest"("userId", "archivedAt");
+CREATE INDEX idx_quest_user ON "Quest"(user_id);
 
--- ============================================================
--- 6. ScheduleVersion
--- ============================================================
-CREATE TABLE "ScheduleVersion" (
-    id              UUID                PRIMARY KEY DEFAULT gen_random_uuid(),
-    "userId"        UUID                NOT NULL,
-    "questId"       UUID                NOT NULL,
-    "effectiveFrom" DATE                NOT NULL,
-    "effectiveTo"   DATE,
-    recurrence      TEXT                NOT NULL,
-    weekdays        INT[]               NOT NULL DEFAULT '{}',
-    title           TEXT                NOT NULL,
-    category        TEXT                NOT NULL,
-    pillar          TEXT                NOT NULL,
-    difficulty      quest_difficulty    NOT NULL,
-    target          INT                 NOT NULL,
-    "ruleVersion"   INT                 NOT NULL,
-
-    CONSTRAINT "ScheduleVersion_userId_questId_effectiveFrom_key"
-        UNIQUE ("userId", "questId", "effectiveFrom"),
-    CONSTRAINT "ScheduleVersion_quest_fkey"
-        FOREIGN KEY ("userId", "questId") REFERENCES "Quest"("userId", id) ON DELETE RESTRICT
-);
-
--- ============================================================
--- 7. DayPreferenceVersion
--- ============================================================
-CREATE TABLE "DayPreferenceVersion" (
-    id              UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
-    "userId"        UUID    NOT NULL,
-    "effectiveFrom" DATE    NOT NULL,
-    "effectiveTo"   DATE,
-    "restWeekdays"  INT[]   NOT NULL DEFAULT '{}',
-
-    CONSTRAINT "DayPreferenceVersion_userId_effectiveFrom_key"
-        UNIQUE ("userId", "effectiveFrom"),
-    CONSTRAINT "DayPreferenceVersion_userId_fkey"
-        FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE RESTRICT
-);
-
--- ============================================================
--- 8. DayPlan
--- ============================================================
+-- 4. Day Plans (Daily Agendas)
 CREATE TABLE "DayPlan" (
-    id                      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    "userId"                UUID        NOT NULL,
-    "localDate"             DATE        NOT NULL,
-    "timezoneSnapshot"      TEXT        NOT NULL,
-    "startsAtUtc"           TIMESTAMPTZ NOT NULL,
-    "deadlineUtc"           TIMESTAMPTZ NOT NULL,
-    status                  day_status  NOT NULL,
-    "priorityId"            UUID,
-    "priorityLockedAt"      TIMESTAMPTZ,
-    "plannedCount"          INT         NOT NULL DEFAULT 0,
-    "healthGainAccounted"   INT         NOT NULL DEFAULT 0,
-    "streakApplied"         BOOLEAN     NOT NULL DEFAULT FALSE,
-    "closedAt"              TIMESTAMPTZ,
-
-    CONSTRAINT "DayPlan_userId_localDate_key" UNIQUE ("userId", "localDate"),
-    CONSTRAINT "DayPlan_userId_id_key"        UNIQUE ("userId", id),
-    CONSTRAINT "DayPlan_userId_fkey"
-        FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE RESTRICT
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+    plan_date     DATE NOT NULL,
+    status        VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    planned_count INT NOT NULL DEFAULT 0,
+    UNIQUE (user_id, plan_date)
 );
 
--- ============================================================
--- 9. QuestOccurrence
--- ============================================================
+-- 5. Quest Occurrences (Daily Quest Execution)
 CREATE TABLE "QuestOccurrence" (
-    id            UUID                PRIMARY KEY DEFAULT gen_random_uuid(),
-    "userId"      UUID                NOT NULL,
-    "questId"     UUID                NOT NULL,
-    "dayPlanId"   UUID                NOT NULL,
-    planned       BOOLEAN             NOT NULL,
-    status        occurrence_status   NOT NULL DEFAULT 'PENDING',
-    "completedAt" TIMESTAMPTZ,
-    title         TEXT                NOT NULL,
-    category      TEXT                NOT NULL,
-    pillar        TEXT                NOT NULL,
-    difficulty    quest_difficulty    NOT NULL,
-    target        INT                 NOT NULL,
-    "rewardXp"    INT                 NOT NULL,
-    "ruleVersion" INT                 NOT NULL,
-
-    CONSTRAINT "QuestOccurrence_userId_id_key"          UNIQUE ("userId", id),
-    CONSTRAINT "QuestOccurrence_questId_dayPlanId_key"  UNIQUE ("questId", "dayPlanId"),
-    CONSTRAINT "QuestOccurrence_userId_dayPlanId_id_key" UNIQUE ("userId", "dayPlanId", id),
-    CONSTRAINT "QuestOccurrence_quest_fkey"
-        FOREIGN KEY ("userId", "questId") REFERENCES "Quest"("userId", id) ON DELETE RESTRICT,
-    CONSTRAINT "QuestOccurrence_dayPlan_fkey"
-        FOREIGN KEY ("userId", "dayPlanId") REFERENCES "DayPlan"("userId", id) ON DELETE RESTRICT
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    quest_id     UUID NOT NULL REFERENCES "Quest"(id) ON DELETE CASCADE,
+    day_plan_id  UUID NOT NULL REFERENCES "DayPlan"(id) ON DELETE CASCADE,
+    status       VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    completed_at TIMESTAMPTZ,
+    UNIQUE (quest_id, day_plan_id)
 );
 
-CREATE INDEX "QuestOccurrence_dayPlanId_status_idx" ON "QuestOccurrence"("dayPlanId", status);
+CREATE INDEX idx_occurrence_plan ON "QuestOccurrence"(day_plan_id, status);
 
--- DayPlan priority self-reference (added after QuestOccurrence exists)
-ALTER TABLE "DayPlan"
-    ADD CONSTRAINT "DayPlan_priority_fkey"
-        FOREIGN KEY ("userId", id, "priorityId")
-        REFERENCES "QuestOccurrence"("userId", "dayPlanId", id)
-        ON DELETE NO ACTION ON UPDATE NO ACTION
-        DEFERRABLE INITIALLY DEFERRED;
-
--- ============================================================
--- 10. ProgressEvent
--- ============================================================
+-- 6. Progress Events (Ledger of XP / Health Changes)
 CREATE TABLE "ProgressEvent" (
-    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    "userId"        UUID        NOT NULL,
-    sequence        INT         NOT NULL,
-    "awardKey"      TEXT        NOT NULL,
-    kind            TEXT        NOT NULL,
-    "occurrenceId"  UUID,
-    "dayId"         UUID,
-    "sealCode"      TEXT,
-    "xpDelta"       INT         NOT NULL,
-    "healthDelta"   INT         NOT NULL,
-    "ruleVersion"   INT         NOT NULL,
-    "recordedAt"    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT "ProgressEvent_userId_sequence_key"  UNIQUE ("userId", sequence),
-    CONSTRAINT "ProgressEvent_userId_awardKey_key"  UNIQUE ("userId", "awardKey"),
-    CONSTRAINT "ProgressEvent_userId_fkey"
-        FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE RESTRICT,
-    CONSTRAINT "ProgressEvent_day_fkey"
-        FOREIGN KEY ("userId", "dayId") REFERENCES "DayPlan"("userId", id) ON DELETE RESTRICT,
-    CONSTRAINT "ProgressEvent_occurrence_fkey"
-        FOREIGN KEY ("userId", "occurrenceId") REFERENCES "QuestOccurrence"("userId", id) ON DELETE RESTRICT
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+    occurrence_id UUID REFERENCES "QuestOccurrence"(id) ON DELETE SET NULL,
+    event_kind    VARCHAR(50) NOT NULL,
+    xp_delta      INT NOT NULL DEFAULT 0,
+    health_delta  INT NOT NULL DEFAULT 0,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX "ProgressEvent_userId_recordedAt_idx" ON "ProgressEvent"("userId", "recordedAt");
+CREATE INDEX idx_event_user ON "ProgressEvent"(user_id, created_at);
 
--- ============================================================
--- 11. CompletionReceipt  (idempotency ledger)
--- ============================================================
-CREATE TABLE "CompletionReceipt" (
-    "userId"        UUID        NOT NULL,
-    "operationId"   UUID        NOT NULL,
-    "requestHash"   CHAR(64)    NOT NULL,
-    "responseBody"  JSONB       NOT NULL,
-    "createdAt"     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT "CompletionReceipt_pkey" PRIMARY KEY ("userId", "operationId"),
-    CONSTRAINT "CompletionReceipt_userId_fkey"
-        FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE RESTRICT
-);
-
-CREATE INDEX "CompletionReceipt_createdAt_idx" ON "CompletionReceipt"("createdAt");
-
--- ============================================================
--- 12. Achievement  (global definitions)
--- ============================================================
+-- 7. Achievements (Badge Catalog)
 CREATE TABLE "Achievement" (
-    code              TEXT    NOT NULL,
-    "ruleVersion"     INT     NOT NULL,
-    "eligibilityRule" JSONB   NOT NULL,
-
-    CONSTRAINT "Achievement_pkey" PRIMARY KEY (code, "ruleVersion")
+    code        VARCHAR(50) PRIMARY KEY,
+    title       VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    bonus_xp    INT NOT NULL DEFAULT 50
 );
 
--- ============================================================
--- 13. UserAchievement
--- ============================================================
+-- 8. User Achievements (Earned Badges)
 CREATE TABLE "UserAchievement" (
-    "userId"                    UUID        NOT NULL,
-    "achievementCode"           TEXT        NOT NULL,
-    "ruleVersion"               INT         NOT NULL,
-    "unlockedAt"                TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    "qualifyingOccurrenceId"    UUID,
-    "qualifyingDayId"           UUID,
-    "bonusXp"                   INT         NOT NULL,
-
-    CONSTRAINT "UserAchievement_pkey"
-        PRIMARY KEY ("userId", "achievementCode"),
-    CONSTRAINT "UserAchievement_userId_fkey"
-        FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE RESTRICT,
-    CONSTRAINT "UserAchievement_achievement_fkey"
-        FOREIGN KEY ("achievementCode", "ruleVersion")
-        REFERENCES "Achievement"(code, "ruleVersion") ON DELETE RESTRICT,
-    CONSTRAINT "UserAchievement_qualifyingDay_fkey"
-        FOREIGN KEY ("userId", "qualifyingDayId")
-        REFERENCES "DayPlan"("userId", id) ON DELETE RESTRICT,
-    CONSTRAINT "UserAchievement_qualifyingOccurrence_fkey"
-        FOREIGN KEY ("userId", "qualifyingOccurrenceId")
-        REFERENCES "QuestOccurrence"("userId", id) ON DELETE RESTRICT
+    user_id          UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+    achievement_code VARCHAR(50) NOT NULL REFERENCES "Achievement"(code) ON DELETE CASCADE,
+    unlocked_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, achievement_code)
 );
