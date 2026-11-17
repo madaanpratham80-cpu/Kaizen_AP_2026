@@ -1,0 +1,214 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 280" width="100%" height="280">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050811" />
+      <stop offset="50%" stop-color="#0b1324" />
+      <stop offset="100%" stop-color="#060c18" />
+    </linearGradient>
+
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#111c33" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#0a1120" stop-opacity="0.9" />
+    </linearGradient>
+
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="50%" stop-color="#ecfdf5" />
+      <stop offset="100%" stop-color="#22d3ee" />
+    </linearGradient>
+
+    <linearGradient id="hpGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+
+    <linearGradient id="xpGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+
+    <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#fbbf24" />
+    </linearGradient>
+
+    <linearGradient id="scanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0" />
+      <stop offset="50%" stop-color="#10b981" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#10b981" stop-opacity="0" />
+    </linearGradient>
+
+    <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.25" />
+      <stop offset="55%" stop-color="#06b6d4" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+
+    <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1e293b" stroke-width="0.7" stroke-opacity="0.6" />
+    </pattern>
+  </defs>
+
+  <!-- Background & Grid -->
+  <rect width="900" height="280" rx="16" fill="url(#bgGrad)" />
+  <rect width="900" height="280" rx="16" fill="url(#grid)" />
+  <ellipse cx="450" cy="135" rx="280" ry="130" fill="url(#centerGlow)">
+    <animate attributeName="rx" values="250;300;250" dur="4s" repeatCount="indefinite" />
+  </ellipse>
+
+  <!-- Animated Vertical HUD Scanline -->
+  <rect x="0" y="-60" width="900" height="60" fill="url(#scanGrad)">
+    <animate attributeName="y" values="-60;280" dur="5s" repeatCount="indefinite" />
+  </rect>
+
+  <!-- Outer Frame & Corner Brackets -->
+  <rect x="1.5" y="1.5" width="897" height="277" rx="15" fill="none" stroke="#1e293b" stroke-width="1.5" />
+  <path d="M 18 32 L 18 16 L 34 16 M 866 16 L 882 16 L 882 32 M 18 248 L 18 264 L 34 264 M 866 264 L 882 264 L 882 248" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" />
+
+  <!-- LEFT PANEL: PLAYER STATE -->
+  <rect x="32" y="34" width="210" height="212" rx="10" fill="url(#cardGrad)" stroke="#1e293b" stroke-width="1.2" />
+  <line x1="32" y1="62" x2="242" y2="62" stroke="#1e293b" stroke-width="1" />
+  <circle cx="48" cy="48" r="3.5" fill="#10b981">
+    <animate attributeName="opacity" values="1;0.25;1" dur="1.8s" repeatCount="indefinite" />
+  </circle>
+  <text x="60" y="52" font-family="monospace" font-size="10" font-weight="700" fill="#94a3b8" letter-spacing="1.5">PLAYER STATE // HUD</text>
+
+  <!-- Health Bar -->
+  <text x="48" y="84" font-family="monospace" font-size="10" font-weight="700" fill="#cbd5e1">HEALTH (HP)</text>
+  <text x="226" y="84" font-family="monospace" font-size="10" font-weight="700" fill="#34d399" text-anchor="end">95 / 100</text>
+  <rect x="48" y="92" width="178" height="9" rx="4.5" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+  <rect x="52" y="94" width="120" height="5" rx="2.5" fill="url(#hpGrad)">
+    <animate attributeName="width" values="115;164;115" dur="4s" repeatCount="indefinite" />
+  </rect>
+  <text x="48" y="114" font-family="monospace" font-size="9" fill="#64748b">Daily recovery: <tspan fill="#34d399">+5 HP</tspan></text>
+
+  <!-- XP Bar -->
+  <text x="48" y="140" font-family="monospace" font-size="10" font-weight="700" fill="#cbd5e1">LEVEL 07</text>
+  <text x="226" y="140" font-family="monospace" font-size="10" font-weight="700" fill="#38bdf8" text-anchor="end">+35 XP</text>
+  <rect x="48" y="148" width="178" height="9" rx="4.5" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+  <rect x="52" y="150" width="40" height="5" rx="2.5" fill="url(#xpGrad)">
+    <animate attributeName="width" values="35;170;35" dur="5s" repeatCount="indefinite" />
+  </rect>
+  <text x="48" y="170" font-family="monospace" font-size="9" fill="#64748b">100 XP per level • Never decays</text>
+
+  <!-- Starter Seal Badge -->
+  <rect x="46" y="186" width="182" height="46" rx="7" fill="#091526" stroke="#059669" stroke-width="1" stroke-dasharray="3 2" />
+  <text x="58" y="204" font-family="monospace" font-size="9" font-weight="700" fill="#fbbf24" letter-spacing="0.8">SEAL UNLOCKED (+25 XP)</text>
+  <text x="58" y="220" font-family="sans-serif" font-size="11" font-weight="700" fill="#e2e8f0">Iron Will • Recovery Active</text>
+
+  <!-- CENTER STAGE: KAIZEN -->
+  <text x="450" y="145" text-anchor="middle" font-family="sans-serif" font-size="110" font-weight="900" fill="none" stroke="#10b981" stroke-width="1.2" stroke-opacity="0.12">
+    改善
+    <animate attributeName="stroke-opacity" values="0.06;0.2;0.06" dur="3.5s" repeatCount="indefinite" />
+  </text>
+
+  <!-- Floating Particles -->
+  <g font-family="monospace" font-size="11" font-weight="700" fill="#34d399">
+    <text x="275" y="100">+35 XP</text>
+    <animateTransform attributeName="transform" type="translate" values="0,10; 0,-25" dur="3.2s" repeatCount="indefinite" />
+    <animate attributeName="opacity" values="0;1;0" dur="3.2s" repeatCount="indefinite" />
+  </g>
+  <g font-family="monospace" font-size="11" font-weight="700" fill="#38bdf8">
+    <text x="575" y="95">+20 XP</text>
+    <animateTransform attributeName="transform" type="translate" values="0,12; 0,-24" dur="3.8s" repeatCount="indefinite" />
+    <animate attributeName="opacity" values="0;1;0" dur="3.8s" repeatCount="indefinite" />
+  </g>
+
+  <!-- Top Status Pill -->
+  <rect x="355" y="26" width="190" height="24" rx="12" fill="#06281e" stroke="#10b981" stroke-width="1" />
+  <circle cx="372" cy="38" r="4" fill="#10b981">
+    <animate attributeName="opacity" values="1;0.2;1" dur="1.5s" repeatCount="indefinite" />
+  </circle>
+  <text x="456" y="42" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="#a7f3d0" letter-spacing="1.5">PRIORITY QUEST LOCKED</text>
+
+  <!-- Main KAIZEN Title -->
+  <text x="459" y="128" text-anchor="middle" font-family="sans-serif" font-size="64" font-weight="900" letter-spacing="12" fill="#020617">KAIZEN</text>
+  <text x="456" y="125" text-anchor="middle" font-family="sans-serif" font-size="64" font-weight="900" letter-spacing="12" fill="url(#titleGrad)">KAIZEN</text>
+  <text x="456" y="125" text-anchor="middle" font-family="sans-serif" font-size="64" font-weight="900" letter-spacing="12" fill="none" stroke="#6ee7b7" stroke-width="1.5" stroke-dasharray="420" stroke-dashoffset="420">
+    KAIZEN
+    <animate attributeName="stroke-dashoffset" values="420;0;420" dur="6s" repeatCount="indefinite" />
+  </text>
+
+  <!-- Subtitle -->
+  <text x="450" y="154" text-anchor="middle" font-family="monospace" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="3.5">
+    <tspan fill="#10b981">&gt;&gt;</tspan> CONTINUITY WITH RECOVERY <tspan fill="#10b981">&lt;&lt;</tspan>
+  </text>
+
+  <!-- 7-Day Recovery Strip -->
+  <rect x="266" y="174" width="368" height="72" rx="10" fill="url(#cardGrad)" stroke="#1e293b" stroke-width="1.2" />
+  <text x="450" y="191" text-anchor="middle" font-family="monospace" font-size="9" font-weight="700" fill="#64748b" letter-spacing="1.5">7-DAY SCHEDULE SNAPSHOT • STREAK CONTINUITY</text>
+
+  <g transform="translate(282, 200)">
+    <rect width="40" height="34" rx="6" fill="#063022" stroke="#10b981" stroke-width="1.2" />
+    <text x="20" y="13" text-anchor="middle" font-family="monospace" font-size="8" fill="#6ee7b7">MON</text>
+    <text x="20" y="27" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="#ecfdf5">ACT</text>
+  </g>
+  <g transform="translate(331, 200)">
+    <rect width="40" height="34" rx="6" fill="#063022" stroke="#10b981" stroke-width="1.2" />
+    <text x="20" y="13" text-anchor="middle" font-family="monospace" font-size="8" fill="#6ee7b7">TUE</text>
+    <text x="20" y="27" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="#ecfdf5">ACT</text>
+  </g>
+  <g transform="translate(380, 200)">
+    <rect width="40" height="34" rx="6" fill="#2a1215" stroke="#f43f5e" stroke-width="1.2" />
+    <text x="20" y="13" text-anchor="middle" font-family="monospace" font-size="8" fill="#fda4af">WED</text>
+    <text x="20" y="27" text-anchor="middle" font-family="monospace" font-size="9" font-weight="700" fill="#f43f5e">MISS</text>
+  </g>
+  <g transform="translate(429, 200)">
+    <rect width="42" height="34" rx="6" fill="#2e2107" stroke="#fbbf24" stroke-width="1.8">
+      <animate attributeName="stroke-opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
+    </rect>
+    <text x="21" y="13" text-anchor="middle" font-family="monospace" font-size="8" font-weight="700" fill="#fde68a">THU</text>
+    <text x="21" y="27" text-anchor="middle" font-family="monospace" font-size="9" font-weight="700" fill="#fbbf24">REC+</text>
+  </g>
+  <g transform="translate(480, 200)">
+    <rect width="40" height="34" rx="6" fill="#063022" stroke="#10b981" stroke-width="1.2" />
+    <text x="20" y="13" text-anchor="middle" font-family="monospace" font-size="8" fill="#6ee7b7">FRI</text>
+    <text x="20" y="27" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="#ecfdf5">ACT</text>
+  </g>
+  <g transform="translate(529, 200)">
+    <rect width="40" height="34" rx="6" fill="#063022" stroke="#10b981" stroke-width="1.2" />
+    <text x="20" y="13" text-anchor="middle" font-family="monospace" font-size="8" fill="#6ee7b7">SAT</text>
+    <text x="20" y="27" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="#ecfdf5">ACT</text>
+  </g>
+  <g transform="translate(578, 200)">
+    <rect width="40" height="34" rx="6" fill="#0c243d" stroke="#38bdf8" stroke-width="1.2" />
+    <text x="20" y="13" text-anchor="middle" font-family="monospace" font-size="8" fill="#7dd3fc">SUN</text>
+    <text x="20" y="27" text-anchor="middle" font-family="monospace" font-size="9" font-weight="700" fill="#38bdf8">REST</text>
+  </g>
+
+  <!-- RIGHT PANEL: STREAK & PILLARS -->
+  <rect x="658" y="34" width="210" height="212" rx="10" fill="url(#cardGrad)" stroke="#1e293b" stroke-width="1.2" />
+  <line x1="658" y1="62" x2="868" y2="62" stroke="#1e293b" stroke-width="1" />
+  <text x="674" y="52" font-family="monospace" font-size="10" font-weight="700" fill="#94a3b8" letter-spacing="1.5">STREAK &amp; PILLARS</text>
+
+  <rect x="674" y="72" width="178" height="42" rx="8" fill="#18120b" stroke="#f59e0b" stroke-width="1" />
+  <path d="M692 80 C692 80 699 87 697 95 C696 99 692 102 688 102 C684 102 680 99 680 94 C680 90 684 87 685 84 C686 87 688 88 688 88 C688 85 692 80 692 80 Z" fill="#fbbf24">
+    <animate attributeName="opacity" values="1;0.6;1" dur="0.9s" repeatCount="indefinite" />
+  </path>
+  <text x="708" y="91" font-family="sans-serif" font-size="13" font-weight="800" fill="#fef3c7">7-DAY STREAK</text>
+  <text x="708" y="105" font-family="monospace" font-size="9" fill="#fbbf24">Rest days preserve streak</text>
+
+  <!-- Cognitive -->
+  <text x="674" y="136" font-family="monospace" font-size="10" font-weight="700" fill="#cbd5e1">COGNITIVE</text>
+  <text x="852" y="136" font-family="monospace" font-size="10" font-weight="700" fill="#38bdf8" text-anchor="end">LVL 08</text>
+  <rect x="674" y="142" width="178" height="7" rx="3.5" fill="#0f172a" />
+  <rect x="674" y="142" width="150" height="7" rx="3.5" fill="url(#xpGrad)">
+    <animate attributeName="width" values="130;162;130" dur="4s" repeatCount="indefinite" />
+  </rect>
+
+  <!-- Physical -->
+  <text x="674" y="174" font-family="monospace" font-size="10" font-weight="700" fill="#cbd5e1">PHYSICAL</text>
+  <text x="852" y="174" font-family="monospace" font-size="10" font-weight="700" fill="#34d399" text-anchor="end">LVL 06</text>
+  <rect x="674" y="180" width="178" height="7" rx="3.5" fill="#0f172a" />
+  <rect x="674" y="180" width="135" height="7" rx="3.5" fill="url(#hpGrad)">
+    <animate attributeName="width" values="115;148;115" dur="3.5s" repeatCount="indefinite" />
+  </rect>
+
+  <!-- Craft -->
+  <text x="674" y="212" font-family="monospace" font-size="10" font-weight="700" fill="#cbd5e1">CRAFT</text>
+  <text x="852" y="212" font-family="monospace" font-size="10" font-weight="700" fill="#fbbf24" text-anchor="end">LVL 07</text>
+  <rect x="674" y="218" width="178" height="7" rx="3.5" fill="#0f172a" />
+  <rect x="674" y="218" width="125" height="7" rx="3.5" fill="url(#amberGrad)">
+    <animate attributeName="width" values="105;140;105" dur="4.5s" repeatCount="indefinite" />
+  </rect>
+</svg>

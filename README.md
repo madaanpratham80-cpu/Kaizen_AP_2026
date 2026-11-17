@@ -11,9 +11,7 @@
 
 # KAIZEN
 
-<div align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=800&size=40&duration=2200&pause=1000&color=10B981¢er=true&vCenter=true&repeat=true&width=650&height=75&lines=KAIZEN+%E2%80%94+%E6%94%B9%E5%96%84;CONTINUITY+WITH+RECOVERY;%2BXP+%E2%80%A2+HEALTH+%E2%80%A2+STREAKS" alt="KAIZEN" />
-</div>
+![KAIZEN — Continuity with Recovery](kaizen-banner.svg)
 
 <div align="center">
   <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0f172a,50:059669,100:10b981&height=200§ion=header&text=KAIZEN%20%E6%94%B9%E5%96%84&fontSize=56&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Continuity%20with%20Recovery%20%E2%80%A2%20%2BXP%20%E2%80%A2%20Health%20%E2%80%A2%20Streaks&descAlignY=62&descSize=18" width="100%" alt="KAIZEN Banner" />
